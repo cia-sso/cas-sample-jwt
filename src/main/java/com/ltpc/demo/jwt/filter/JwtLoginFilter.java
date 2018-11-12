@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 
 /**
@@ -54,8 +55,10 @@ public class JwtLoginFilter implements Filter {
         final HttpServletRequest httpRequest = (HttpServletRequest) request;
         final HttpServletResponse httpResponse = (HttpServletResponse) response;
         HttpSession session = httpRequest.getSession();
-        final String token = request.getParameter(TICKET_PARAM);
-
+        String token = request.getParameter(TICKET_PARAM);
+        if (token != null) {
+            token = URLDecoder.decode(token, "UTF-8");
+        }
         try {
 
             //解密token，拿到里面的对象claims
@@ -67,11 +70,15 @@ public class JwtLoginFilter implements Filter {
             if(clientUser!= null) {
                 request.setAttribute(USER_SESSION_NAME,clientUser);
                 request.setAttribute("loginName",clientUser.getLoginName());
-            }else {
+            }else if(token == null || token.trim().isEmpty()){
                 auth(httpRequest,httpResponse);
             }
 
         }catch (final SignatureException e) {
+            e.printStackTrace();
+            throw new ServletException("Invalid token.");
+        } catch (Exception e){
+            e.printStackTrace();
             throw new ServletException("Invalid token.");
         }
 
@@ -90,10 +97,18 @@ public class JwtLoginFilter implements Filter {
      * @return
      */
     private SSOUserInfo assembleUser(HttpSession session, String token) {
-        SSOUserInfo clientUser = null;
+        SSOUserInfo clientUser = new SSOUserInfo();
+
         // 根据code获取access_token
         final Claims claims = Jwts.parser().setSigningKey(SIGN_KEY).parseClaimsJws(token).getBody();
-
+        clientUser.setAccountId(Long.parseLong((String)claims.get("accountId")));
+        clientUser.setCustomerId(Long.parseLong((String)claims.get("customerId")));
+        clientUser.setDepartmentId(Long.parseLong((String)claims.get("departmentId")));
+        clientUser.setEmail((String)claims.get("email"));
+        clientUser.setLoginName((String)claims.get("loginName"));
+        clientUser.setSubCustomerame((String)claims.get("subCustomerame"));
+        clientUser.setSubCustomerId(Long.parseLong((String)claims.get("subCustomerId")));
+        clientUser.setTelephone((String)claims.get("telephone"));
         return clientUser;
     }
 
