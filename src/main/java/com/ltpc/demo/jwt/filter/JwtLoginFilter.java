@@ -2,18 +2,21 @@ package com.ltpc.demo.jwt.filter;
 
 
 import com.ltpc.demo.jwt.model.SSOUserInfo;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.SignatureException;
-import lombok.extern.slf4j.Slf4j;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.JwtConsumer;
+import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+import org.jose4j.keys.AesKey;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,7 +31,7 @@ public class JwtLoginFilter implements Filter {
 
     private static String USER_SESSION_NAME = "ssoUser";
 
-    private static String SIGN_KEY;
+    private static Key SIGN_KEY;
 
     private static String SERVER_NAME;
 
@@ -43,9 +46,9 @@ public class JwtLoginFilter implements Filter {
         String signKey = filterConfig.getInitParameter("signKey");
         String ssoServerLoginUrl = filterConfig.getInitParameter("ssoServerLoginUrl");
         SERVER_NAME = serverName;
-        SIGN_KEY = signKey;
         SSO_SERVER_URL = ssoServerUrl;
         SSO_SERVER_LOGIN_URL = ssoServerLoginUrl;
+        SIGN_KEY = new AesKey(signKey.getBytes(StandardCharsets.UTF_8));
     }
 
 
@@ -56,9 +59,6 @@ public class JwtLoginFilter implements Filter {
         final HttpServletResponse httpResponse = (HttpServletResponse) response;
         HttpSession session = httpRequest.getSession();
         String token = request.getParameter(TICKET_PARAM);
-        if (token != null) {
-            token = URLDecoder.decode(token, "UTF-8");
-        }
         try {
 
             //解密token，拿到里面的对象claims
@@ -74,9 +74,6 @@ public class JwtLoginFilter implements Filter {
                 auth(httpRequest,httpResponse);
             }
 
-        }catch (final SignatureException e) {
-            e.printStackTrace();
-            throw new ServletException("Invalid token.");
         } catch (Exception e){
             e.printStackTrace();
             throw new ServletException("Invalid token.");
@@ -98,17 +95,32 @@ public class JwtLoginFilter implements Filter {
      */
     private SSOUserInfo assembleUser(HttpSession session, String token) {
         SSOUserInfo clientUser = new SSOUserInfo();
-
-        // 根据code获取access_token
-        final Claims claims = Jwts.parser().setSigningKey(SIGN_KEY).parseClaimsJws(token).getBody();
-        clientUser.setAccountId(Long.parseLong((String)claims.get("accountId")));
-        clientUser.setCustomerId(Long.parseLong((String)claims.get("customerId")));
-        clientUser.setDepartmentId(Long.parseLong((String)claims.get("departmentId")));
-        clientUser.setEmail((String)claims.get("email"));
-        clientUser.setLoginName((String)claims.get("loginName"));
-        clientUser.setSubCustomerame((String)claims.get("subCustomerame"));
-        clientUser.setSubCustomerId(Long.parseLong((String)claims.get("subCustomerId")));
-        clientUser.setTelephone((String)claims.get("telephone"));
+        System.out.println("=========================\n\r" + token);
+        JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                .setRequireExpirationTime() // the JWT must have an expiration time
+                .setMaxFutureValidityInMinutes(4800) // but the  expiration time can't be too crazy
+                .setAllowedClockSkewInSeconds(30) // allow some leeway in validating time based claims to account for clock skew
+                .setRequireSubject() // the JWT must have a subject claim
+                .setExpectedIssuer("http://localhost:8080/uac") // whom the JWT needs to have been issued by
+                .setExpectedAudience("http://localhost:8085/") // to whom the JWT is intended for
+                .setVerificationKey(SIGN_KEY) // verify the signature with the public key
+                .build();
+        try {
+            //  Validate the JWT and process it to the Claims
+            JwtClaims jwtClaims = jwtConsumer.processToClaims(token);
+            System.out.println("JWT validation succeeded! " + jwtClaims);
+            Map<String, Object> claims = jwtClaims.getClaimsMap();
+            clientUser.setAccountId(Long.parseLong((String) claims.get("accountId")));
+            clientUser.setCustomerId(Long.parseLong((String) claims.get("customerId")));
+            clientUser.setDepartmentId(Long.parseLong((String) claims.get("departmentId")));
+            clientUser.setEmail((String) claims.get("email"));
+            clientUser.setLoginName((String) claims.get("loginName"));
+            clientUser.setSubCustomerame((String) claims.get("subCustomerame"));
+            clientUser.setSubCustomerId(Long.parseLong((String) claims.get("subCustomerId")));
+            clientUser.setTelephone((String) claims.get("telephone"));
+        } catch (InvalidJwtException e) {
+            e.printStackTrace();
+        }
         return clientUser;
     }
 
