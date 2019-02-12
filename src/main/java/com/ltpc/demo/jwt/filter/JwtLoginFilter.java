@@ -112,7 +112,10 @@ public class JwtLoginFilter implements Filter {
             Map<String, Object> claims = jwtClaims.getClaimsMap();
             clientUser.setAccountId(Long.parseLong((String) claims.get("accountId")));
             clientUser.setCustomerId(Long.parseLong((String) claims.get("customerId")));
-            clientUser.setDepartmentId(Long.parseLong((String) claims.get("departmentId")));
+            String departmentId = (String)claims.get("departmentId");
+            if(departmentId != null && departmentId.trim().length()>0 ) {
+                clientUser.setDepartmentId(Long.parseLong((String) claims.get("departmentId")));
+            }
             clientUser.setEmail((String) claims.get("email"));
             clientUser.setLoginName((String) claims.get("loginName"));
             clientUser.setSubCustomerame((String) claims.get("subCustomerame"));
