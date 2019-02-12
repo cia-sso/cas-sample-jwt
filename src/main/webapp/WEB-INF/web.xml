@@ -29,6 +29,10 @@
             <param-name>signKey</param-name>
             <param-value>jJlkccl17vF0ZDL120heyvpv6bOm0qqu6bOm0qqu0qquserdersqerr45eRw5R4equ0qquserdersqerr45eRw5R4e</param-value>
         </init-param>
+        <init-param>
+            <param-name>decryptionKey</param-name>
+            <param-value>jJlkccl17vF0ZDLIh0heyvpv6bOm0qqY6bOm0qqY0qy</param-value>
+        </init-param>
     </filter>
 
     <filter-mapping>

@@ -33,6 +33,8 @@ public class JwtLoginFilter implements Filter {
 
     private static Key SIGN_KEY;
 
+    private static Key DECRYPTION_KEY;
+
     private static String SERVER_NAME;
 
     private static String SSO_SERVER_URL;
@@ -43,12 +45,15 @@ public class JwtLoginFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         String serverName = filterConfig.getInitParameter("serverName");
         String ssoServerUrl = filterConfig.getInitParameter("ssoServerUrl");
-        String signKey = filterConfig.getInitParameter("signKey");
         String ssoServerLoginUrl = filterConfig.getInitParameter("ssoServerLoginUrl");
+        String signKey = filterConfig.getInitParameter("signKey");
+        String decryptionKey = filterConfig.getInitParameter("decryptionKey");
+
         SERVER_NAME = serverName;
         SSO_SERVER_URL = ssoServerUrl;
         SSO_SERVER_LOGIN_URL = ssoServerLoginUrl;
         SIGN_KEY = new AesKey(signKey.getBytes(StandardCharsets.UTF_8));
+        DECRYPTION_KEY = new AesKey(decryptionKey.getBytes(StandardCharsets.UTF_8));
     }
 
 
@@ -97,13 +102,21 @@ public class JwtLoginFilter implements Filter {
         SSOUserInfo clientUser = new SSOUserInfo();
         System.out.println("=========================\n\r" + token);
         JwtConsumer jwtConsumer = new JwtConsumerBuilder()
-                .setRequireExpirationTime() // the JWT must have an expiration time
-                .setMaxFutureValidityInMinutes(4800) // but the  expiration time can't be too crazy
-                .setAllowedClockSkewInSeconds(30) // allow some leeway in validating time based claims to account for clock skew
-                .setRequireSubject() // the JWT must have a subject claim
-                .setExpectedIssuer("http://localhost:8080/uac") // whom the JWT needs to have been issued by
-                .setExpectedAudience("http://localhost:8085/") // to whom the JWT is intended for
-                .setVerificationKey(SIGN_KEY) // verify the signature with the public key
+                // the JWT must have an expiration time
+                .setRequireExpirationTime()
+                // but the  expiration time can't be too crazy
+                .setMaxFutureValidityInMinutes(4800)
+                // allow some leeway in validating time based claims to account for clock skew
+                .setAllowedClockSkewInSeconds(30)
+                // the JWT must have a subject claim
+                .setRequireSubject()
+                // whom the JWT needs to have been issued by
+                .setExpectedIssuer("http://localhost:8080/uac")
+                // to whom the JWT is intended for
+                .setExpectedAudience("http://localhost:8085/")
+                // verify the signature with the public key
+                .setVerificationKey(SIGN_KEY)
+//                .setDecryptionKey(DECRYPTION_KEY)
                 .build();
         try {
             //  Validate the JWT and process it to the Claims
