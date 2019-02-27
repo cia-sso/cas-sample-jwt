@@ -95,7 +95,10 @@
                 <artifactId>jetty-maven-plugin</artifactId>
                 <version>9.3.6.v20151106</version>
                 <configuration>
-                    <jettyXml>${basedir}/etc/jetty/jetty.xml,${basedir}/etc/jetty/jetty-ssl.xml,${basedir}/etc/jetty/jetty-https.xml</jettyXml>
+                    <!--<jettyXml>${basedir}/etc/jetty/jetty.xml,${basedir}/etc/jetty/jetty-ssl.xml,${basedir}/etc/jetty/jetty-https.xml</jettyXml>-->
+                    <httpConnector>
+                        <port>8085</port>
+                    </httpConnector>
                     <systemProperties>
                         <systemProperty>
                             <name>org.eclipse.jetty.annotations.maxWait</name>
@@ -103,7 +106,7 @@
                         </systemProperty>
                     </systemProperties>
                     <webApp>
-                        <contextPath>/sample</contextPath>
+                        <contextPath>/</contextPath>
                         <overrideDescriptor>${basedir}/etc/jetty/web.xml</overrideDescriptor>
                     </webApp>
                     <jvmArgs>-Xdebug -Xrunjdwp:transport=dt_socket,address=5002,server=y,suspend=n</jvmArgs>
